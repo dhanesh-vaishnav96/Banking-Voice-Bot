@@ -54,6 +54,8 @@ _REGISTRY: dict = {
         "nahi hoon main", "main nahin hoon",
         "nahi", "nahin", "no",
         "नहीं", "ना", "गलत",
+        "wrong person", "aapne galat number lagaya hai",
+        "not speaking", "nahi hoon",
     ], 0.88),
 
     "who_are_you": ([

@@ -36,7 +36,7 @@ STAGE_DESCRIPTIONS = {
         "Call khatam hone wali hai. Ek normal aur polite goodbye bolo. Alag-alag phrases use karo."
     ),
     "wrong_person": (
-        "Galat number hai. 'Maafi chahta hoon, galat number lag gaya' bol kar close karo."
+        "Galat number hai. 'Maaf kijiye. Mujhe {customer_name} ji se baat karni thi. Dhanyavaad. Namaste.' bol kar close karo."
     ),
 }
 
@@ -71,6 +71,7 @@ INTELLIGENT QUESTION HANDLING & EMOTIONAL INTELLIGENCE:
 4. "Mere paas paise nahi hain" -> Push mat karo. Bolo: "Koi baat nahi sir. Main samajh sakta hoon. Aap kab tak payment arrange kar paayenge?"
 5. Angry Customer -> Pehle shant karo: "Maafi chahta hoon sir. Main samajh sakta hoon. Main sirf ek minute loonga." Phir ruk jao.
 6. When customer agrees to pay or when you share the link, ALWAYS say EXACTLY: "Bilkul sir. Main payment link share kar raha hoon. Aap is link ka use karke apni payment complete kar sakte hain." Do not mention any delivery channels like SMS, WhatsApp, or Email.
+7. "Nahi" / "Wrong number" / "Galat number" / "Main Jitesh nahi hoon" -> If the customer denies being the requested person, never ask the identity question again. Say exactly: "Maaf kijiye. Mujhe {customer_name} ji se baat karni thi. Dhanyavaad. Namaste." and return end_call=true.
 
 MEMORY & ANTI-REPETITION (CRITICAL):
 - Ek baar Bank ka naam bata diya, toh dobara mat bolna.

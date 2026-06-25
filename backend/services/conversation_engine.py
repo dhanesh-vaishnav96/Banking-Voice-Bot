@@ -139,6 +139,8 @@ INTENT_REGISTRY: Dict[str, Tuple[list, float]] = {
         "nahi hoon main", "main nahin hoon",
         "nahi", "nahin", "no",
         "नहीं", "ना", "गलत",
+        "wrong person", "aapne galat number lagaya hai",
+        "not speaking", "nahi hoon",
     ], 0.88),
 
     # ── Payment Acceptance ────────────────────────────────────────────────────
@@ -333,8 +335,7 @@ def get_opening_message(session: ConversationSession) -> str:
 
 def get_wrong_person_message(session: ConversationSession) -> str:
     return (
-        f"Oh, maaf kijiye! Mujhe {session.customer_name} ji se baat karni thi. "
-        "Koi baat nahi. Aapka bohot shukriya. Namaste!"
+        f"Maaf kijiye. Mujhe {session.customer_name} ji se baat karni thi. Dhanyavaad. Namaste."
     )
 
 

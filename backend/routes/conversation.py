@@ -218,8 +218,15 @@ async def process_response(request: ProcessResponseRequest):
     llm_provider: str = "rule_based"
     llm_result = None
 
+    if classifier_intent in ("deny", "wrong_person"):
+        bot_response = f"Maaf kijiye. Mujhe {session.customer_name} ji se baat karni thi. Dhanyavaad. Namaste."
+        session.advance_to(STAGE_WRONG_PERSON)
+        intent = "wrong_person"
+        llm_provider = "rule_based_override"
+        logger.info(f"[IDENTITY CHECK] input=\"{user_text}\" classifier=WRONG_PERSON llm_called=false call_closed=true")
+
     # ── 2a. Try Groq (Primary) ─────────────────────────────────────────────────────
-    if GROQ_ENABLED and LLM_PROVIDER in ("groq",):
+    if not bot_response and GROQ_ENABLED and LLM_PROVIDER in ("groq",):
         try:
             llm_result = await get_groq_response(
                 session=session,
@@ -234,7 +241,7 @@ async def process_response(request: ProcessResponseRequest):
             )
 
     # ── 2b. Try Gemini (Secondary Fallback) ──────────────────────────────────
-    if llm_result is None and GEMINI_ENABLED:
+    if not bot_response and llm_result is None and GEMINI_ENABLED:
         try:
             llm_result = await get_gemini_response(
                 session=session,
@@ -254,6 +261,12 @@ async def process_response(request: ProcessResponseRequest):
         llm_intent = llm_result.intent
         intent = llm_intent if llm_intent != "unclear" else classifier_intent
         confidence = 1.0
+
+        if intent in ("deny", "wrong_person"):
+            bot_response = f"Maaf kijiye. Mujhe {session.customer_name} ji se baat karni thi. Dhanyavaad. Namaste."
+            intent = "wrong_person"
+            llm_result.end_call = True
+            logger.info(f"[IDENTITY CHECK] input=\"{user_text}\" classifier=PASS llm_called=true call_closed=true")
 
         _advance_stage_from_intent(
             session,
