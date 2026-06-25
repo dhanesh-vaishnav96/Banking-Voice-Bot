@@ -119,8 +119,14 @@ async def synthesize(
     provider: Optional[str] = None,
 ) -> Path:
     """
-    High-level TTS: selects ElevenLabs or edge-tts based on config.
-    Falls back to edge-tts automatically if ElevenLabs fails.
+    High-level TTS: tries ElevenLabs first, falls back to edge-tts automatically.
+
+    Fallback triggers on any ElevenLabs failure:
+      - 401 Invalid API key
+      - 402 Payment required
+      - 422 Quota exhausted / 0 credits
+      - 429 Rate limit exceeded
+      - Any network / timeout error
 
     Returns: Path to generated .mp3 file
     """
@@ -140,34 +146,26 @@ async def synthesize(
         try:
             voice_id = voice or ELEVENLABS_VOICE_ID
             await synthesize_elevenlabs(text, voice_id, ELEVENLABS_API_KEY, output_path)
-            logger.info(f"TTS provider=elevenlabs | file={output_path.name}")
+            logger.info(f"TTS provider=elevenlabs | voice={voice_id} | file={output_path.name}")
             return output_path
         except Exception as e:
-            err_str = str(e)
-            # Surface clear diagnostics for common ElevenLabs failures
-            if "quota_exceeded" in err_str or "0 credits" in err_str:
-                logger.error(
-                    "ElevenLabs QUOTA EXHAUSTED — 0 credits remaining. "
-                    "Options: (1) Wait for monthly reset, (2) Upgrade plan, "
-                    "(3) Use new API key. Falling back to Edge TTS."
-                )
-            elif "401" in err_str or "invalid_api_key" in err_str:
-                logger.error(
-                    f"ElevenLabs INVALID API KEY — check ELEVENLABS_API_KEY in .env. "
-                    f"Falling back to Edge TTS. Detail: {err_str[:200]}"
-                )
-            elif "402" in err_str:
-                logger.error(
-                    f"ElevenLabs PAYMENT REQUIRED (402) — subscription issue. "
-                    f"Falling back to Edge TTS. Detail: {err_str[:200]}"
-                )
+            err_str = str(e).lower()
+            # Detect all known ElevenLabs failure modes
+            if "401" in err_str or "invalid_api_key" in err_str or "unauthorized" in err_str:
+                logger.error("ElevenLabs: INVALID API KEY — check ELEVENLABS_API_KEY. Falling back to Edge TTS.")
+            elif "402" in err_str or "payment" in err_str:
+                logger.error("ElevenLabs: PAYMENT REQUIRED (402). Falling back to Edge TTS.")
+            elif "429" in err_str or "rate limit" in err_str or "too many requests" in err_str:
+                logger.warning("ElevenLabs: RATE LIMIT (429). Falling back to Edge TTS.")
+            elif "quota" in err_str or "credit" in err_str or "0 credits" in err_str or "422" in err_str:
+                logger.error("ElevenLabs: QUOTA EXHAUSTED — 0 credits remaining. Falling back to Edge TTS.")
+            elif "timeout" in err_str or "connection" in err_str or "network" in err_str:
+                logger.warning(f"ElevenLabs: NETWORK ERROR ({str(e)[:100]}). Falling back to Edge TTS.")
             else:
-                logger.warning(
-                    f"ElevenLabs TTS failed ({err_str[:200]}). Falling back to Edge TTS."
-                )
-            # Fall through to edge-tts
+                logger.warning(f"ElevenLabs TTS failed ({str(e)[:200]}). Falling back to Edge TTS.")
+            # Fall through to edge-tts below
 
-    # ── Fallback: edge-tts ────────────────────────────────────────────────────
+    # ── Fallback: edge-tts (Microsoft Neural, always free, no API key) ─────────
     selected_voice = voice or EDGE_TTS_DEFAULT_VOICE
     logger.info(f"TTS provider=edge_tts | voice={selected_voice} | chars={len(text)}")
     await synthesize_edge_tts(text, selected_voice, output_path)

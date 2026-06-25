@@ -18,10 +18,12 @@ from backend.schemas.models import (
 from backend.models.session import (
     create_session,
     get_session,
-    STAGE_AWAITING_NAME_CONFIRMATION,
-    STAGE_AMOUNT_DUE_INFORMATION,
+    STAGE_IDENTITY_CONFIRMATION,
+    STAGE_INTRODUCTION,
     STAGE_BANK_INFORMATION,
+    STAGE_AMOUNT_INFORMATION,
     STAGE_PAYMENT_OFFER,
+    STAGE_PAYMENT_LINK,
     STAGE_CONVERSATION_COMPLETED,
     STAGE_WRONG_PERSON,
 )
@@ -57,48 +59,7 @@ router = APIRouter(prefix="/api", tags=["conversation"])
 # Stage Advancement Logic (backend owns state, NOT Gemini)
 # ─────────────────────────────────────────────────────────────────────────────
 
-def _advance_stage_from_intent(session, intent: str, end_call: bool, send_link: bool):
-    """
-    Given the detected intent and Gemini metadata flags, advance
-    the session stage. The backend is always the authority on state.
-    """
-    stage = session.stage
-
-    if intent in ("deny", "wrong_person") or (stage == STAGE_AWAITING_NAME_CONFIRMATION and intent == "deny"):
-        session.advance_to(STAGE_WRONG_PERSON)
-
-    elif intent == "already_paid":
-        session.advance_to(STAGE_CONVERSATION_COMPLETED)
-
-    elif intent == "busy_interrupt":
-        session.payment_link_sent = True
-        session.advance_to(STAGE_CONVERSATION_COMPLETED)
-
-    elif intent in ("link_request", "payment_accept", "partial_payment", "delay_promise") or (
-        send_link and stage != STAGE_AWAITING_NAME_CONFIRMATION
-    ):
-        session.payment_link_sent = True
-        session.advance_to(STAGE_CONVERSATION_COMPLETED)
-
-    elif intent in ("payment_decline", "refusal_to_pay", "supervisor_request"):
-        session.advance_to(STAGE_CONVERSATION_COMPLETED)
-        
-    elif intent == "angry_customer":
-        pass # Let the prompt de-escalate without ending the call immediately
-
-    elif intent == "confirm" and stage == STAGE_AWAITING_NAME_CONFIRMATION:
-        session.advance_to(STAGE_AMOUNT_DUE_INFORMATION)
-
-    elif stage == STAGE_AMOUNT_DUE_INFORMATION and intent not in ("who_are_you", "bank_query", "amount_query"):
-        # Any substantive reply after amount info → move to bank stage
-        session.advance_to(STAGE_BANK_INFORMATION)
-
-    elif stage == STAGE_BANK_INFORMATION and intent not in ("who_are_you", "bank_query", "amount_query"):
-        session.advance_to(STAGE_PAYMENT_OFFER)
-
-    elif end_call:
-        session.advance_to(STAGE_CONVERSATION_COMPLETED)
-
+from backend.services.state_machine import get_next_stage_and_response
 
 def _log_turn(session, user_text: str, bot_response: str, intent: str,
               confidence: float, stage_before: str, llm_provider: str):
@@ -168,6 +129,53 @@ async def start_conversation(request: StartConversationRequest):
     )
 
 
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Stage-Aware Fallback Messages (used when all LLMs are unavailable)
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _get_stage_fallback_response(next_stage: str, session) -> str:
+    """Return a deterministic Hindi message appropriate for the given FSM stage."""
+    from backend.utils import number_to_hindi_words
+    from backend.models.session import (
+        STAGE_INTRODUCTION, STAGE_BANK_INFORMATION,
+        STAGE_AMOUNT_INFORMATION, STAGE_PAYMENT_OFFER,
+        STAGE_PAYMENT_LINK, STAGE_CONVERSATION_COMPLETED,
+        STAGE_WRONG_PERSON, STAGE_IDENTITY_CONFIRMATION
+    )
+    name = session.customer_name or "aap"
+
+    if next_stage == STAGE_INTRODUCTION:
+        return f"Namaste {name} ji. Main bank ki collection team se bol raha hoon."
+
+    if next_stage == STAGE_BANK_INFORMATION:
+        return f"Ji. Main {session.bank_name} ki taraf se bol raha hoon."
+
+    if next_stage == STAGE_AMOUNT_INFORMATION:
+        amount_hindi = number_to_hindi_words(session.amount_due)
+        return f"Aapke account mein {amount_hindi} rupaye ki payment pending hai."
+
+    if next_stage == STAGE_PAYMENT_OFFER:
+        return "Kya aap abhi payment kar sakte hain?"
+
+    if next_stage == STAGE_PAYMENT_LINK:
+        return (
+            f"Bilkul. Main payment link share kar raha hoon. "
+            f"Aap isi link ka use karke payment complete kar sakte hain."
+        )
+
+    if next_stage == STAGE_WRONG_PERSON:
+        return f"Maaf kijiye. Mujhe {name} ji se baat karni thi. Dhanyavaad. Namaste."
+
+    if next_stage == STAGE_CONVERSATION_COMPLETED:
+        return "Theek hai. Dhanyavaad. Namaste."
+
+    if next_stage == STAGE_IDENTITY_CONFIRMATION:
+        return f"Kya meri baat {name} ji se ho rahi hai?"
+
+    return "Kya aap phir se bol sakte hain?"
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # POST /api/respond — Multi-Provider Cascade: Groq → Gemini → Rule Engine
 # ─────────────────────────────────────────────────────────────────────────────
@@ -210,100 +218,62 @@ async def process_response(request: ProcessResponseRequest):
         f"User: '{user_text[:50]}' | ClassifierIntent: {classifier_intent} ({classifier_confidence:.2f})"
     )
 
-    # ── Step 2: Multi-provider LLM cascade ────────────────────────────────────────
-    bot_response: str = ""
-    payment_link_to_send: str | None = None
-    intent: str = classifier_intent
-    confidence: float = classifier_confidence
-    llm_provider: str = "rule_based"
-    llm_result = None
+    # ── Step 2: FSM Validation & Deterministic Overrides ────────────────────────
+    next_stage, hardcoded_response, end_call = get_next_stage_and_response(
+        stage_before, classifier_intent, session
+    )
 
-    if classifier_intent in ("deny", "wrong_person"):
-        bot_response = f"Maaf kijiye. Mujhe {session.customer_name} ji se baat karni thi. Dhanyavaad. Namaste."
-        session.advance_to(STAGE_WRONG_PERSON)
-        intent = "wrong_person"
-        llm_provider = "rule_based_override"
-        logger.info(f"[IDENTITY CHECK] input=\"{user_text}\" classifier=WRONG_PERSON llm_called=false call_closed=true")
+    bot_response = ""
+    payment_link_to_send = None
+    intent = classifier_intent
+    confidence = classifier_confidence
+    llm_provider = "rule_based"
 
-    # ── 2a. Try Groq (Primary) ─────────────────────────────────────────────────────
+    if hardcoded_response:
+        # FSM has a deterministic response (Terminal state or exact business logic match)
+        bot_response = hardcoded_response
+        session.advance_to(next_stage)
+        llm_provider = "fsm_deterministic"
+        if next_stage == STAGE_PAYMENT_LINK:
+            payment_link_to_send = session.payment_link
+            session.payment_link_sent = True
+        logger.info(f"[FSM OVERRIDE] Intent={intent} | Advancing {stage_before} -> {next_stage}. Skipping LLM.")
+
+    # ── Step 3: LLM Generation (Only if FSM allowed) ──────────────────────────
     if not bot_response and GROQ_ENABLED and LLM_PROVIDER in ("groq",):
         try:
             llm_result = await get_groq_response(
                 session=session,
                 user_text=user_text,
-                intent_hint=classifier_intent,
+                intent_hint=intent,
             )
+            bot_response = llm_result.response
             llm_provider = "groq"
+            session.advance_to(next_stage) # Force FSM stage
         except GroqUnavailableError as e:
-            logger.warning(
-                f"Session {session.session_id} | Groq unavailable ({e}). "
-                f"Cascading to Gemini..."
-            )
+            logger.warning(f"Groq unavailable: {e}")
 
-    # ── 2b. Try Gemini (Secondary Fallback) ──────────────────────────────────
-    if not bot_response and llm_result is None and GEMINI_ENABLED:
+    if not bot_response and GEMINI_ENABLED:
         try:
             llm_result = await get_gemini_response(
                 session=session,
                 user_text=user_text,
-                intent_hint=classifier_intent,
+                intent_hint=intent,
             )
+            bot_response = llm_result.response
             llm_provider = "gemini_fallback"
+            session.advance_to(next_stage) # Force FSM stage
         except GeminiUnavailableError as e:
-            logger.warning(
-                f"Session {session.session_id} | Gemini unavailable ({e}). "
-                f"Cascading to rule-based engine."
-            )
+            logger.warning(f"Gemini unavailable: {e}")
 
-    # ── 2c. Apply LLM result (if either provider succeeded) ────────────────────
-    if llm_result is not None:
-        bot_response = llm_result.response
-        llm_intent = llm_result.intent
-        intent = llm_intent if llm_intent != "unclear" else classifier_intent
-        confidence = 1.0
-
-        if intent in ("deny", "wrong_person"):
-            bot_response = f"Maaf kijiye. Mujhe {session.customer_name} ji se baat karni thi. Dhanyavaad. Namaste."
-            intent = "wrong_person"
-            llm_result.end_call = True
-            logger.info(f"[IDENTITY CHECK] input=\"{user_text}\" classifier=PASS llm_called=true call_closed=true")
-
-        _advance_stage_from_intent(
-            session,
-            intent=intent,
-            end_call=llm_result.end_call,
-            send_link=llm_result.send_payment_link,
-        )
-
-        # Save extracted entities to session memory
-        if llm_result.promised_date:
-            session.promised_date = llm_result.promised_date
-        if llm_result.promised_amount:
-            session.promised_amount = float(llm_result.promised_amount)
-        if llm_result.callback_requested:
-            session.callback_requested = True
-        if intent == "already_paid":
-            session.payment_completed = True
-
-        if llm_result.send_payment_link:
-            payment_link_to_send = session.payment_link
-
-        elapsed_ms = llm_result.response_time_ms
-        logger.info(
-            f"Session {session.session_id} | {llm_provider.upper()} | "
-            f"ClassifierHint={classifier_intent} | Intent={intent} | "
-            f"Stage→{session.stage} | {elapsed_ms}ms"
-        )
-
-    # ── Step 3: Rule-based final fallback ───────────────────────────────────────
+    # ── Step 3: Stage-aware fallback when both LLMs fail ───────────────────────
     if not bot_response:
-        rb_response, rb_link, rb_intent, rb_conf = process_user_input(session, user_text)
-        bot_response = rb_response
-        intent = rb_intent
-        confidence = rb_conf
+        bot_response = _get_stage_fallback_response(next_stage, session)
         llm_provider = "rule_based_fallback"
-        if rb_link:
-            payment_link_to_send = rb_link
+        session.advance_to(next_stage)
+        if next_stage == STAGE_PAYMENT_LINK:
+            payment_link_to_send = session.payment_link
+            session.payment_link_sent = True
 
     # ── Step 4: Update session history ────────────────────────────────────────
     session.add_to_history("user", user_text)

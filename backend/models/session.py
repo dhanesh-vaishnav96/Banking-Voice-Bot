@@ -6,19 +6,22 @@ from typing import Dict, Optional, List, Any
 from dataclasses import dataclass, field
 
 
-# ─── Conversation Stages ───────────────────────────────────────────────────────
-STAGE_AWAITING_NAME_CONFIRMATION = "awaiting_name_confirmation"
-STAGE_AMOUNT_DUE_INFORMATION     = "amount_due_information"
-STAGE_BANK_INFORMATION           = "bank_information"
-STAGE_PAYMENT_OFFER              = "payment_offer"
-STAGE_CONVERSATION_COMPLETED     = "conversation_completed"
-STAGE_WRONG_PERSON               = "wrong_person"
+STAGE_IDENTITY_CONFIRMATION = "identity_confirmation"
+STAGE_INTRODUCTION           = "introduction"
+STAGE_BANK_INFORMATION       = "bank_information"
+STAGE_AMOUNT_INFORMATION     = "amount_information"
+STAGE_PAYMENT_OFFER          = "payment_offer"
+STAGE_PAYMENT_LINK           = "payment_link"
+STAGE_CONVERSATION_COMPLETED = "conversation_completed"
+STAGE_WRONG_PERSON           = "wrong_person"
 
 ALL_STAGES = [
-    STAGE_AWAITING_NAME_CONFIRMATION,
-    STAGE_AMOUNT_DUE_INFORMATION,
+    STAGE_IDENTITY_CONFIRMATION,
+    STAGE_INTRODUCTION,
     STAGE_BANK_INFORMATION,
+    STAGE_AMOUNT_INFORMATION,
     STAGE_PAYMENT_OFFER,
+    STAGE_PAYMENT_LINK,
     STAGE_CONVERSATION_COMPLETED,
     STAGE_WRONG_PERSON,
 ]
@@ -31,7 +34,7 @@ class ConversationSession:
     amount_due: float
     bank_name: str
     payment_link: str
-    stage: str = STAGE_AWAITING_NAME_CONFIRMATION
+    stage: str = STAGE_IDENTITY_CONFIRMATION
     created_at: float = field(default_factory=time.time)
     updated_at: float = field(default_factory=time.time)
     turn_count: int = 0

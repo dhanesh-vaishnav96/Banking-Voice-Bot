@@ -13,24 +13,29 @@ from backend.utils import number_to_hindi_words
 # Stage context — in Hindi so the LLM reasons in Hindi
 # ─────────────────────────────────────────────────────────────────────────────
 STAGE_DESCRIPTIONS = {
-    "awaiting_name_confirmation": (
+    "identity_confirmation": (
         "Call ki shuruaat. Sirf customer ka naam confirm karo. "
         "Jaise: 'Namaste. Kya meri baat {customer_name} ji se ho rahi hai?'"
     ),
-    "amount_due_information": (
-        "Customer ne haan bol diya hai. Ab permission maango. "
+    "introduction": (
+        "Customer ne haan bol diya hai. Ab introduction do. "
         "Jaise: 'Ji. Main {bank_name} ki taraf se baat kar raha hoon. Kya aapse do minute baat kar sakta hoon?' "
         "Abhi payment ka amount MAT batao."
     ),
     "bank_information": (
-        "Customer ne baat karne ki permission de di hai. Ab payment ke baare me batao. "
+        "Bank information stage."
+        "Jaise: 'Ji main {bank_name} se baat kar raha hoon.'"
+    ),
+    "amount_information": (
+        "Customer ko amount batao. "
         "Jaise: 'Aapke account me {amount_due_hindi} rupaye ki payment baaki hai. Isi regarding call kiya tha.' "
-        "Agar customer sawal puche, toh sirf us sawal ka chhota sa jawab do."
     ),
     "payment_offer": (
-        "Customer ki baat suno. Agar woh paise na hone ki baat karein, toh empathize karo ('Koi baat nahi. Main samajh sakta hoon.'). "
-        "Kabhi push mat karo. Unse pucho ki woh kab tak arrange kar payenge. "
-        "Agar woh date batayein, toh naturally payment link offer karo."
+        "Customer ko payment offer karo. "
+        "Jaise: 'Kya aap abhi payment kar sakte hain?'"
+    ),
+    "payment_link": (
+        "Payment link share karo."
     ),
     "conversation_completed": (
         "Call khatam hone wali hai. Ek normal aur polite goodbye bolo."
@@ -75,7 +80,6 @@ INTELLIGENT QUESTION HANDLING:
 4. "Mere paas paise nahi hain" -> Push mat karo. Bolo: "Koi baat nahi. Main samajh sakta hoon. Aap kab tak payment arrange kar payenge?"
 5. Angry Customer -> Pehle shant karo: "Maafi chahta hoon. Main samajh sakta hoon. Main sirf ek minute loonga." Phir ruk jao.
 6. When customer agrees to pay or when you share the link, ALWAYS say EXACTLY: "Bilkul. Main payment link share kar raha hoon. Aap isi link se payment kar sakte hain." Do not mention any delivery channels like SMS, WhatsApp, or Email.
-7. "Nahi" / "Wrong number" / "Galat number" / "Main Jitesh nahi hoon" -> If the customer denies being the requested person, never ask the identity question again. Say exactly: "Maaf kijiye. Mujhe {customer_name} ji se baat karni thi. Dhanyavaad. Namaste." and return end_call=true.
 
 MEMORY & ANTI-REPETITION (CRITICAL):
 - Ek baar Bank ka naam bata diya, toh dobara mat bolna.
@@ -97,12 +101,12 @@ OUTPUT FORMAT (MANDATORY):
 You MUST return ONLY a valid JSON object. Do NOT wrap the JSON in markdown blocks (no ```json). Do NOT add any extra text or explanation. 
 {{
   "response": "<Natural Hindi/Hinglish speech, max 2 sentences>",
-  "intent": "<confirm|deny|bank_query|amount_query|link_request|busy_interrupt|already_paid|payment_decline|delay_promise|partial_payment|angry_customer|supervisor_request|unclear>",
-  "end_call": <true or false>,
-  "send_payment_link": <true or false>,
+  "intent": "<yes|no|wrong_person|bank_query|amount_query|already_paid|delay|partial_payment|angry_customer|supervisor_request|who_are_you|unclear>",
+  "end_call": false,
+  "send_payment_link": false,
   "promised_date": "<'kal', 'somvaar', ISO date, or null>",
   "promised_amount": <number or null>,
-  "callback_requested": <true or false>
+  "callback_requested": false
 }}
 """
 

@@ -2,8 +2,8 @@ import requests
 import time
 import sys
 
-URL_START = "http://localhost:8000/api/start"
-URL_RESPOND = "http://localhost:8000/api/respond"
+URL_START = "https://dhanesh-96-banking-voice-bot.hf.space/api/start"
+URL_RESPOND = "https://dhanesh-96-banking-voice-bot.hf.space/api/respond"
 
 scenarios = [
     {

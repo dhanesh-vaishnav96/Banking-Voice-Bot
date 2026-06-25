@@ -31,32 +31,30 @@ def _normalise(text: str) -> str:
 
 _REGISTRY: dict = {
 
-    "confirm": ([
-        "ji haan", "ji han", "haan ji", "han ji",
-        "haan bilkul", "bilkul haan",
-        "bol raha hoon", "bol raha hun", "main hi bol raha hoon",
-        "main hi hoon", "haan main hi hoon",
-        "ji main", "main hi", "main hoon",
-        "haan haan", "haan kar sakte ho", "haan baat kar sakte ho",
-        "haan tum mere se baat kar sakte ho",
-        "haan", "han", "haa",
+    "yes": ([
+        "ji haan", "ji han", "haan ji", "han ji", "haan", "han", "haa",
+        "haan bilkul", "bilkul haan", "bilkul",
+        "haan theek hai", "haan sahi hai", "theek hai", "thik hai", "ok", "okay",
+        "kar sakta hoon", "kar sakte hain", "karunga", "abhi karta hoon",
+        "haan bhej do", "bhej do", "link bhejo", "send link", "payment link bhejo",
+        "haan kar sakte ho", "haan baat kar sakte ho",
+        "yes", "yeah", "yep", "sure", "zaroor",
         "हां", "जी हां", "हाँ", "जी हाँ", "बिल्कुल", "ठीक है",
-        "yes", "yeah", "yep", "yes speaking", "speaking",
-        "bilkul", "zaroor", "sure",
-        "theek hai", "thik hai",
-        "ok", "okay",
     ], 0.90),
 
-    "deny": ([
-        "nahi main nahi hoon", "main nahi hoon",
-        "galat number hai", "wrong number",
+    "no": ([
+        "nahi", "nahin", "no", "na",
+        "नहीं", "ना",
+    ], 0.88),
+
+    "wrong_person": ([
+        "nahi main nahi hoon", "main nahi hoon", "main jitesh nahi hoon",
+        "galat number hai", "wrong number", "aapne galat number lagaya hai",
         "nahi bol raha", "nahi ji nahi",
         "nahi hoon main", "main nahin hoon",
-        "nahi", "nahin", "no",
-        "नहीं", "ना", "गलत",
-        "wrong person", "aapne galat number lagaya hai",
+        "गलत", "wrong person",
         "not speaking", "nahi hoon",
-    ], 0.88),
+    ], 0.95),
 
     "who_are_you": ([
         "aap kaun bol rahe ho", "aap kaun hain", "aap kaun ho",
@@ -78,48 +76,21 @@ _REGISTRY: dict = {
         "total kitna", "due amount",
     ], 0.88),
 
-    "link_request": ([
-        "link bhej do", "link send karo", "payment link",
-        "link chahiye", "payment karna hai",
-        "send the link", "link do", "bhej do",
-        "haan bhejo", "link share karo",
-    ], 0.92),
-
     "already_paid": ([
-        "maine payment kar diya", "payment ho gaya",
+        "maine payment kar diya", "payment ho gaya", "payment kar diya",
+        "kal payment kar diya", "maine pay kar diya",
         "already paid", "kar diya maine",
         "pay kar diya", "paise de diye",
-        "payment complete", "payment done",
-    ], 0.92),
+        "payment complete", "payment done", "pehle hi de diya", "kal kar diya tha",
+    ], 0.95),
 
-    "busy_interrupt": ([
-        "busy hoon", "baad mein call karo", "main meeting mein hoon",
-        "abhi nahi", "baad mein baat karte hain",
-        "thodi der baad", "busy hai",
-        "call back karo", "later call",
-    ], 0.90),
-
-    "delay_promise": ([
-        "kal karunga", "kal kar dunga", "kal payment karunga",
+    "delay": ([
+        "kal", "parso", "kal karunga", "kal kar dunga", "kal payment karunga",
         "do din mein", "week mein karunga",
-        "promise karunga", "zaroor karunga",
-        "jald karunga", "karta hoon",
-    ], 0.88),
-
-    "payment_accept": ([
-        "haan karunga", "bilkul karunga", "payment karunga",
-        "abhi karta hoon", "karta hoon",
-        "yes will pay", "pay kar deta hoon",
-        "okay karunga", "thik hai karunga",
-    ], 0.88),
-
-    "payment_decline": ([
-        "nahi karunga", "payment nahi karunga",
-        "nahi dunga", "refuse",
-        "mat karo", "nahi karna",
-        "no payment", "main nahi dunga", "nahi bharunga",
-        "refusal to pay", "paise nahi hain"
-    ], 0.88),
+        "salary aane ke baad", "time chahiye", "abhi paise nahi hain",
+        "busy hoon", "baad mein call karo", "main meeting mein hoon",
+        "abhi nahi", "baad mein baat karte hain", "thodi der baad",
+    ], 0.92),
 
     "partial_payment": ([
         "aadha de sakta hoon", "aadha payment", "thoda payment",
