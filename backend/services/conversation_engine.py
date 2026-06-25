@@ -329,7 +329,7 @@ def _fmt_amount(amount: float) -> str:
 
 def get_opening_message(session: ConversationSession) -> str:
     return (
-        f"Namaste! Kya main {session.customer_name} ji se baat kar sakta hoon?"
+        f"Namaste. Kya meri baat {session.customer_name} ji se ho rahi hai?"
     )
 
 
@@ -342,25 +342,23 @@ def get_wrong_person_message(session: ConversationSession) -> str:
 def get_amount_due_information(session: ConversationSession) -> str:
     amount_hindi = number_to_hindi_words(session.amount_due)
     return (
-        f"{session.customer_name} ji, aapke account mein {amount_hindi} rupaye ki "
-        "due payment pending hai. Kripaya isse jald se jald clear kar dein."
+        f"Ji. Main {session.bank_name} ki taraf se baat kar raha hoon. "
+        f"Aapke account mein {amount_hindi} rupaye ki payment baaki hai."
     )
 
 
 def get_who_are_you_message(session: ConversationSession) -> str:
     amount_hindi = number_to_hindi_words(session.amount_due)
     return (
-        f"Ji, main {session.bank_name} ke collections department se bol raha hoon. "
-        f"Aapke account mein {amount_hindi} rupaye due hain, "
-        "aur main aapki madad karna chahta hoon isse resolve karne mein."
+        f"Ji, main {session.bank_name} ki taraf se bol raha hoon. "
+        f"Aapke account mein {amount_hindi} rupaye baaki hain."
     )
 
 
 def get_bank_only_message(session: ConversationSession) -> str:
     """Answer bank query without immediately jumping to payment offer."""
     return (
-        f"Ji, main {session.bank_name} ki taraf se bol raha hoon. "
-        "Kya aap abhi payment ke baare mein baat karna chahenge?"
+        f"Ji, main {session.bank_name} ki taraf se bol raha hoon."
     )
 
 
@@ -368,9 +366,7 @@ def get_amount_only_message(session: ConversationSession) -> str:
     """Answer amount query in isolation."""
     amount_hindi = number_to_hindi_words(session.amount_due)
     return (
-        f"{session.customer_name} ji, aapke account mein abhi "
-        f"{amount_hindi} rupaye ki pending payment hai. "
-        "Kya main payment link share karun?"
+        f"Aapke account mein {amount_hindi} rupaye ki payment baaki hai."
     )
 
 
@@ -379,58 +375,50 @@ def get_bank_information(session: ConversationSession) -> str:
     return (
         f"Ji, main {session.bank_name} se bol raha hoon. "
         f"Aapke account mein {amount_hindi} rupaye pending hain. "
-        "Kya main abhi payment link share karun? Aap ek click mein payment kar sakte hain."
+        "Kya main payment link share karun?"
     )
 
 
 def get_payment_link_message(session: ConversationSession) -> str:
     return (
-        "Bilkul sir. Main payment link share kar raha hoon. "
-        "Aap is link ka use karke apni payment complete kar sakte hain."
+        "Bilkul. Main payment link share kar raha hoon. "
+        "Aap isi link se payment kar sakte hain."
     )
 
 
 def get_busy_message(session: ConversationSession) -> str:
     return (
-        f"Ji bilkul, {session.customer_name} ji. Koi baat nahi! "
-        "Main samajhta hoon aap busy hain. "
-        "Main abhi payment link share kar raha hoon. "
-        "Aap jab free hon tab is link ka use karke payment kar sakte hain."
+        "Koi baat nahi. Main samajh sakta hoon. "
+        "Main payment link share kar deta hoon. Aap baad mein kar dijiyega."
     )
 
 
 def get_delay_message(session: ConversationSession) -> str:
     return (
-        f"Theek hai, {session.customer_name} ji. "
-        "Main aapki baat samajh raha hoon. "
-        "Kripaya jald se jald payment kar dein taaki koi extra charges na lagein. "
+        "Theek hai. Main samajh gaya. "
         "Main abhi payment link share kar raha hoon. "
-        "Aap is link ka use karke apni payment complete kar sakte hain. Dhanyavaad!"
+        "Aap us se payment kar sakte hain."
     )
 
 
 def get_payment_decline_message(session: ConversationSession) -> str:
     return (
-        f"Theek hai, {session.customer_name} ji. "
-        "Koi baat nahi. Lekin please dhyan rakhein ki due amount par "
-        "late charges lag sakte hain. "
-        "Jab bhi payment karna ho, hamare helpline par call karein. Namaste!"
+        "Theek hai. Koi baat nahi. "
+        "Aap baad mein hamare helpline par call kar sakte hain. Namaste."
     )
 
 
 def get_payment_already_done_message(session: ConversationSession) -> str:
     return (
-        f"Acha, {session.customer_name} ji. Agar aapne payment kar diya hai, "
-        "to kripaya use update hone mein 24 ghante ka samay dein. "
-        "Hum apna system check kar lenge. Aapka bohot shukriya. Namaste!"
+        "Theek hai. Agar aapne payment kar diya hai to woh update ho jayega. "
+        "Dhanyavaad. Namaste."
     )
 
 
 def get_payment_offer_followup(session: ConversationSession) -> str:
     """Offer payment link after bank info was given."""
     return (
-        f"Toh {session.customer_name} ji, kya main abhi payment link share karun? "
-        "Bahut aasaan hai — ek click mein ho jayega."
+        "Kya main abhi payment link share karun?"
     )
 
 
@@ -438,18 +426,15 @@ def get_unclear_message(session: ConversationSession, stage: str) -> str:
     """Stage-aware fallback when intent is unclear."""
     if stage == STAGE_AWAITING_NAME_CONFIRMATION:
         return (
-            f"Maaf kijiye, kya aap {session.customer_name} ji bol rahe hain? "
-            "Kripaya haan ya nahi mein batayein."
+            f"Kya aap {session.customer_name} ji bol rahe hain?"
         )
     elif stage == STAGE_AMOUNT_DUE_INFORMATION:
         return (
-            f"{session.customer_name} ji, kya aapka koi sawaal hai "
-            "payment ke baare mein?"
+            "Kya aapka koi sawaal hai?"
         )
     elif stage in (STAGE_BANK_INFORMATION, STAGE_PAYMENT_OFFER):
         return (
-            f"{session.customer_name} ji, kya main aapko payment link bhejun? "
-            "Haan ya nahi batayein."
+            "Kya main aapko payment link bhejun?"
         )
     return "Maaf kijiye, kya aap phir se bol sakte hain?"
 
