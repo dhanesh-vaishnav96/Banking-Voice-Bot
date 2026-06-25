@@ -27,10 +27,7 @@ from backend.models.session import (
     STAGE_CONVERSATION_COMPLETED,
     STAGE_WRONG_PERSON,
 )
-from backend.services.conversation_engine import (
-    get_opening_message,
-    process_user_input,
-)
+# Removed conversation_engine imports
 from backend.services.intent_classifier import classify_intent
 from backend.services.groq_service import (
     get_groq_response,
@@ -103,7 +100,8 @@ async def start_conversation(request: StartConversationRequest):
         payment_link=payment_link,
     )
 
-    opening_message = get_opening_message(session)
+    name = session.customer_name or "aap"
+    opening_message = f"Namaste. Kya meri baat {name} ji se ho rahi hai?"
     session.add_to_history("bot", opening_message)
     session.add_gemini_turn("bot", opening_message)
 
