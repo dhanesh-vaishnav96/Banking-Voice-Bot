@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="AI Voice Collection System — Enterprise Hindi voice collection agent for payment recovery." />
+  <title>AI Voice Collection System</title>
+
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+
+  <link rel="stylesheet" href="/static/css/style.css" />
+</head>
+<body>
+
+<div class="app-wrapper">
+
+  <!-- ── Header ─────────────────────────────────────────────────────────── -->
+  <header class="app-header">
+    <div class="logo-icon">🗣</div>
+    <div class="header-titles">
+      <h1>AI Voice Collection System</h1>
+      <span class="header-sub">Hybrid AI · Groq LLM · ElevenLabs Voice</span>
+    </div>
+
+  </header>
+
+  <!-- ── Live Call Banner (hidden until conversation starts) ────────────── -->
+  <div class="call-banner" id="call-banner" style="display:none;">
+    <div class="call-banner-left">
+      <div class="call-status-dot" id="call-status-dot"></div>
+      <div class="call-info">
+        <div class="call-title">Voice Collection Call</div>
+        <div class="call-meta" id="call-meta">Initializing…</div>
+      </div>
+    </div>
+    <div class="call-banner-center">
+      <div class="call-label">Customer</div>
+      <div class="call-value" id="call-customer-name">—</div>
+    </div>
+    <div class="call-banner-center">
+      <div class="call-label">Status</div>
+      <div class="call-value" id="call-status-label">Connecting</div>
+    </div>
+    <div class="call-banner-right">
+      <div class="call-label">Call Duration</div>
+      <div class="call-timer" id="call-timer">00:00</div>
+    </div>
+  </div>
+
+  <!-- ── Main Layout ────────────────────────────────────────────────────── -->
+  <main class="app-main">
+
+    <!-- ── Left Panel: Setup & Controls ──────────────────────────────────── -->
+    <aside class="setup-panel">
+
+      <!-- Customer Details -->
+      <section>
+        <div class="panel-title">Customer Details</div>
+
+        <div class="form-group">
+          <label for="customer-name">Customer Name <span style="color:#e11d48">*</span></label>
+          <input type="text" id="customer-name" placeholder="e.g. Jitesh Soni" value="Jitesh Soni" autocomplete="off" />
+        </div>
+
+        <div class="form-group">
+          <label for="amount-due">Amount Due (₹) <span style="color:#e11d48">*</span></label>
+          <input type="number" id="amount-due" placeholder="e.g. 5000" value="5000" min="1" />
+        </div>
+
+        <div class="form-group">
+          <label for="bank-name">Bank Name <span style="color:#e11d48">*</span></label>
+          <input type="text" id="bank-name" placeholder="e.g. ICICI Bank" value="ICICI Bank" autocomplete="off" />
+        </div>
+
+        <div class="form-group">
+          <label for="payment-link">Payment Link</label>
+          <input type="url" id="payment-link" placeholder="https://pay.example.com" value="https://pay.example.com/jitesh-soni" />
+          <span class="input-hint">Shared with customer upon agreement</span>
+        </div>
+
+        <button class="btn btn-primary" id="start-btn">
+          ▶ Start Call
+        </button>
+        <button class="btn btn-secondary" id="reset-btn" style="display:none; margin-top:8px;">
+          ↺ End Call / Reset
+        </button>
+      </section>
+
+      <hr class="divider" />
+
+      <!-- Session Info -->
+      <section>
+        <div class="panel-title">Active Session</div>
+        <div class="session-info">
+          <div class="info-row">
+            <span>Session ID</span>
+            <strong id="session-id-display">—</strong>
+          </div>
+          <div class="info-row">
+            <span>Customer</span>
+            <strong id="session-name-display">—</strong>
+          </div>
+          <div class="info-row">
+            <span>Amount</span>
+            <strong id="session-amount-display">—</strong>
+          </div>
+          <div class="info-row">
+            <span>Bank</span>
+            <strong id="session-bank-display">—</strong>
+          </div>
+        </div>
+      </section>
+
+      <hr class="divider" />
+
+      <!-- Conversation Timeline (left panel) -->
+      <section>
+        <div class="panel-title">Call Progress</div>
+        <div class="stage-progress">
+          <div class="stage-step" data-stage="awaiting_name_confirmation">
+            <div class="step-icon">1</div>
+            <span>Customer Verified</span>
+          </div>
+          <div class="stage-step" data-stage="amount_due_information">
+            <div class="step-icon">2</div>
+            <span>Amount Explained</span>
+          </div>
+          <div class="stage-step" data-stage="bank_information">
+            <div class="step-icon">3</div>
+            <span>Bank Info Shared</span>
+          </div>
+          <div class="stage-step" data-stage="payment_offer">
+            <div class="step-icon">4</div>
+            <span>Payment Offered</span>
+          </div>
+          <div class="stage-step" data-stage="conversation_completed">
+            <div class="step-icon">✓</div>
+            <span>Link Generated</span>
+          </div>
+        </div>
+      </section>
+
+      <hr class="divider" />
+
+      <!-- Technical Details (collapsible) -->
+      <section>
+        <div class="panel-title tech-toggle" id="tech-toggle" onclick="toggleTechPanel()">
+          Technical Details <span id="tech-arrow">▶</span>
+        </div>
+        <div id="tech-panel" style="display:none;">
+          <div class="tech-grid">
+            <div class="tech-item">
+              <span class="tech-label">LLM Provider</span>
+              <span class="tech-value primary">Groq · Llama-3</span>
+            </div>
+            <div class="tech-item">
+              <span class="tech-label">LLM Fallback</span>
+              <span class="tech-value">Gemini 2.0 Flash</span>
+            </div>
+            <div class="tech-item">
+              <span class="tech-label">Voice Provider</span>
+              <span class="tech-value primary">ElevenLabs</span>
+            </div>
+            <div class="tech-item">
+              <span class="tech-label">Voice Fallback</span>
+              <span class="tech-value">Edge TTS</span>
+            </div>
+            <div class="tech-item">
+              <span class="tech-label">Speech Input</span>
+              <span class="tech-value">Browser Web Speech API</span>
+            </div>
+            <div class="tech-item">
+              <span class="tech-label">Architecture</span>
+              <span class="tech-value">Hybrid AI Voice Bot</span>
+            </div>
+            <div class="tech-item">
+              <span class="tech-label">Engine</span>
+              <span class="tech-value">LLM + Rule Fallback</span>
+            </div>
+            <div class="tech-item">
+              <span class="tech-label">Language</span>
+              <span class="tech-value">Hindi / Hinglish</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </aside>
+
+    <!-- ── Right Panel: Chat ───────────────────────────────────────────────── -->
+    <div class="chat-panel">
+
+      <!-- Status Bar -->
+      <div class="status-bar">
+        <div class="status-indicator">
+          <div class="status-dot idle" id="status-dot"></div>
+          <span id="status-text">Ready to start</span>
+        </div>
+        <!-- Voice Status Badge -->
+        <div class="voice-badge-wrap" id="voice-badge-wrap" style="display:none;">
+          <span class="voice-badge" id="voice-badge">●</span>
+        </div>
+        <span class="stage-badge" id="stage-badge">Not started</span>
+      </div>
+
+      <!-- Transcript -->
+      <div class="chat-transcript" id="chat-transcript">
+        <div class="empty-state" id="empty-state">
+          <div class="icon">🏦</div>
+          <p>Configure customer details and click<br><strong>Start Call</strong> to begin the voice session.</p>
+        </div>
+      </div>
+
+      <!-- Text Input -->
+      <div class="text-input-row">
+        <input
+          type="text"
+          id="text-input"
+          placeholder="Start a call first..."
+          disabled
+          autocomplete="off"
+        />
+        <button class="btn-send" id="send-btn" disabled title="Send (Enter)">➤</button>
+      </div>
+
+      <!-- Mic Section -->
+      <div class="mic-section">
+        <button class="btn-mic" id="mic-btn" disabled title="Click to speak">🎤</button>
+        <div class="voice-status" id="voice-status"></div>
+        <div class="mic-label">
+          Click mic to respond in Hindi<br>
+          <small style="color: #94a3b8;">Browser Speech Recognition (Hindi)</small>
+        </div>
+      </div>
+
+    </div>
+    <!-- /chat-panel -->
+
+  </main>
+  <!-- /app-main -->
+
+</div>
+<!-- /app-wrapper -->
+
+<!-- Toast Container -->
+<div class="toast-container" id="toast-container"></div>
+
+<!-- Summary Modal -->
+<div class="modal-backdrop" id="summary-modal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h2>📋 Conversation Summary</h2>
+      <button class="modal-close" id="summary-close" title="Close">×</button>
+    </div>
+    <div class="modal-body" id="summary-content">
+      <!-- Populated by JS -->
+    </div>
+  </div>
+</div>
+
+<script src="/static/js/app.js"></script>
+</body>
+</html>
