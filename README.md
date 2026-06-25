@@ -1,3 +1,12 @@
+---
+title: Banking Voice Bot
+emoji: 🏦
+colorFrom: blue
+colorTo: indigo
+sdk: docker
+app_port: 7860
+---
+
 # Hindi Voice Collection Bot — POC
 
 A fully working, end-to-end **Hindi Voice Collection Bot** built with:
